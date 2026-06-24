@@ -1,16 +1,5 @@
-"""
-visualization.py -- Plotting and GUI display helpers for Skyrmion dynamics.
-
-This module provides:
-
-  * plot_spin_configuration     -- 2-D quiver + colourmap of the spin texture
-  * plot_com_trajectory         -- centre-of-mass path over time
-  * display_equations           -- physics equations rendered in Tkinter
-  * display_results             -- numeric results panel for the GUI
-"""
-
 import matplotlib
-matplotlib.use("TkAgg")               # must be set before importing pyplot
+matplotlib.use("TkAgg")
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -18,37 +7,15 @@ import numpy as np
 import tkinter as tk
 
 
-# ---------------------------------------------------------------------------
-#  Spin-texture quiver plot
-# ---------------------------------------------------------------------------
-
+# draws the spin configuration as arrows on a colored background
 def plot_spin_configuration(parent, spins,
                             title="Skyrmion Spin Configuration"):
-    """
-    Draw a 2-D vector-field plot of the spin configuration.
-
-    The in-plane components (Sx, Sy) are shown as black arrows,
-    and the out-of-plane component (Sz) is shown as a blue-red
-    colourmap underneath.  Arrows are subsampled so that the
-    plot stays readable.
-
-    Parameters
-    ----------
-    parent : tk.Widget
-        Tkinter parent widget that will host the figure.
-    spins : ndarray, shape (N, M, 3)
-    title : str
-
-    Returns
-    -------
-    FigureCanvasTkAgg
-    """
     N, M = spins.shape[:2]
     Sx, Sy, Sz = spins[:, :, 0], spins[:, :, 1], spins[:, :, 2]
 
     fig, ax = plt.subplots(figsize=(7, 6), dpi=100)
 
-    # ---- colourmap of the out-of-plane component ----
+    # show out-of-plane component as color map
     im = ax.imshow(Sz, cmap="RdBu_r", vmin=-1, vmax=1,
                    extent=[0, M - 1, N - 1, 0], aspect="equal",
                    interpolation="bilinear")
@@ -57,8 +24,8 @@ def plot_spin_configuration(parent, spins,
     cbar.set_label("Sz  (out-of-plane)", fontsize=11)
     cbar.ax.tick_params(labelsize=10)
 
-    # ---- subsampled quiver of in-plane components ----
-    step = max(1, min(N, M) // 18)   # keep ~18 arrows per dimension
+    # subsample arrows so the plot is readable
+    step = max(1, min(N, M) // 18)
     X, Y = np.meshgrid(np.arange(M), np.arange(N))
 
     ax.quiver(X[::step, ::step], Y[::step, ::step],
@@ -79,34 +46,8 @@ def plot_spin_configuration(parent, spins,
     return canvas
 
 
-# ---------------------------------------------------------------------------
-#  Centre-of-mass trajectory plot
-# ---------------------------------------------------------------------------
-
+# plots the path the skyrmion center took during the simulation
 def plot_com_trajectory(parent, positions, lattice_size):
-    """
-    Draw the path traced by the skyrmion centre of mass.
-
-    Points are coloured by timestep (blue -> red) so that the
-    direction of motion is visible.  Start and end markers are
-    highlighted.
-
-    Parameters
-    ----------
-    parent : tk.Widget
-    positions : list of (float, float)
-    lattice_size : float
-        Used to set axis limits.
-
-    Returns
-    -------
-    FigureCanvasTkAgg
-
-    Raises
-    ------
-    ValueError
-        If fewer than 2 positions are provided.
-    """
     if len(positions) < 2:
         raise ValueError("Need at least 2 positions for a trajectory.")
 
@@ -115,14 +56,14 @@ def plot_com_trajectory(parent, positions, lattice_size):
 
     fig, ax = plt.subplots(figsize=(7, 6), dpi=100)
 
-    # Scatter coloured by step index
+    # color points by step number to show direction
     pts = ax.scatter(xs, ys, c=range(len(xs)), cmap="coolwarm",
                      s=35, alpha=0.85, zorder=5)
 
-    # Connecting line
+    # connecting line
     ax.plot(xs, ys, "k-", alpha=0.3, linewidth=1, zorder=3)
 
-    # Start (green) and end (red) markers
+    # start and end markers
     ax.plot(xs[0], ys[0], "go", ms=10, label="Start", zorder=6)
     ax.plot(xs[-1], ys[-1], "ro", ms=10, label="End",   zorder=6)
 
@@ -136,7 +77,7 @@ def plot_com_trajectory(parent, positions, lattice_size):
     ax.set_ylabel("Y  (lattice units)", fontsize=11)
 
     ax.set_xlim(0, lattice_size)
-    ax.set_ylim(lattice_size, 0)         # same orientation as imshow
+    ax.set_ylim(lattice_size, 0)
     ax.set_aspect("equal")
     ax.tick_params(labelsize=10)
     ax.legend(fontsize=10)
@@ -149,31 +90,14 @@ def plot_com_trajectory(parent, positions, lattice_size):
     return canvas
 
 
-# ---------------------------------------------------------------------------
-#  Equation display  (Tkinter Labels -- no LaTeX needed)
-# ---------------------------------------------------------------------------
-
+# shows the physics equations as labels in the info panel
 def display_equations(parent):
-    """
-    Render the physics equations as styled Tkinter Labels.
-
-    Because Tkinter cannot render LaTeX directly, we use Unicode
-    characters and clear multi-line text.
-
-    Parameters
-    ----------
-    parent : tk.Widget
-
-    Returns
-    -------
-    tk.Frame
-    """
     frame = tk.Frame(parent, relief=tk.GROOVE, bd=2, padx=10, pady=10)
 
     tk.Label(frame, text="Physics Equations",
              font=("Arial", 13, "bold")).pack(anchor=tk.W, pady=(0, 8))
 
-    # -----  Spin texture  -----
+    # skyrmion spin texture equations
     tk.Label(frame, text="Skyrmion Spin Texture:",
              font=("Arial", 11, "bold")).pack(anchor=tk.W, pady=(5, 2))
     for line in [
@@ -186,7 +110,7 @@ def display_equations(parent):
         tk.Label(frame, text=line,
                  font=("Arial", 10)).pack(anchor=tk.W)
 
-    # -----  Energies  -----
+    # energy equations
     tk.Label(frame, text="Magnetic Energies:",
              font=("Arial", 11, "bold")).pack(anchor=tk.W, pady=(10, 2))
     for line in [
@@ -197,7 +121,7 @@ def display_equations(parent):
         tk.Label(frame, text=line,
                  font=("Arial", 10)).pack(anchor=tk.W)
 
-    # -----  Motion  -----
+    # motion equation
     tk.Label(frame, text="Motion (Thiele equation):",
              font=("Arial", 11, "bold")).pack(anchor=tk.W, pady=(10, 2))
     for line in [
@@ -211,25 +135,8 @@ def display_equations(parent):
     return frame
 
 
-# ---------------------------------------------------------------------------
-#  Results display
-# ---------------------------------------------------------------------------
-
+# updates the results panel with simulation data
 def display_results(parent, initial_pos, final_pos, distance, num_steps):
-    """
-    Show a small table of simulation results inside the parent widget.
-
-    Any existing children of *parent* are removed first so that
-    this function is safe to call repeatedly.
-
-    Parameters
-    ----------
-    parent : tk.Widget
-    initial_pos : (float, float)
-    final_pos   : (float, float)
-    distance    : float
-    num_steps   : int
-    """
     for w in parent.winfo_children():
         w.destroy()
 

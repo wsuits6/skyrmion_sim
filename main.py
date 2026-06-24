@@ -1,24 +1,3 @@
-#!/usr/bin/env python3
-"""
-main.py -- Entry point for the Hybrid Quantum-Classical Simulation
-           of Skyrmion Dynamics.
-
-This Tkinter desktop application lets you:
-
-  1. Set simulation parameters (lattice size, exchange constant,
-     DMI strength, magnetic field, current, steps).
-  2. Generate a skyrmion spin texture.
-  3. Run a motion simulation (skyrmion driven by spin-polarised current).
-  4. Plot the centre-of-mass trajectory.
-  5. Export results to a text file.
-
-Usage
------
-    python main.py
-
-Dependencies:  numpy, matplotlib  (see requirements.txt)
-"""
-
 import tkinter as tk
 from tkinter import messagebox
 import numpy as np
@@ -38,82 +17,85 @@ from visualization import (
 
 
 class SkyrmionApp:
-    """Main GUI application."""
-
     def __init__(self, root):
         self.root = root
-        root.title("Hybrid Quantum-Classical Simulation of Skyrmion Dynamics")
-        root.geometry("1400x900")
-        root.minsize(1200, 800)
+        root.title("Skyrmion Dynamics Simulator")
+        root.geometry("1500x950")
+        root.minsize(1300, 850)
 
-        # ---- internal state ----
-        self.spins     = None          # current spin configuration
-        self.centre    = None          # current centre (cx, cy)
-        self.positions = None          # trajectory list
-        self.energies  = None          # energy history
+        # internal state
+        self.spins     = None
+        self.centre    = None
+        self.positions = None
+        self.energies  = None
 
         self._build_ui()
         self._initialise()
 
-    # ------------------------------------------------------------------
-    #  Layout
-    # ------------------------------------------------------------------
-
+    # builds the main layout
     def _build_ui(self):
-        """Create the three-panel layout: controls | plot | info."""
         self.root.grid_rowconfigure(0, weight=1)
-        self.root.grid_columnconfigure(0, weight=0)   # fixed-width left
-        self.root.grid_columnconfigure(1, weight=1)   # stretches
-        self.root.grid_columnconfigure(2, weight=0)   # fixed-width right
+        self.root.grid_columnconfigure(0, weight=0)
+        self.root.grid_columnconfigure(1, weight=1)
+        self.root.grid_columnconfigure(2, weight=0)
 
-        self._build_control_panel()   # column 0
-        self._build_plot_panel()      # column 1
-        self._build_info_panel()      # column 2
+        self._build_control_panel()
+        self._build_plot_panel()
+        self._build_info_panel()
 
+    # left panel with parameter inputs and buttons
     def _build_control_panel(self):
-        """Left panel: parameter inputs and action buttons."""
-        frame = tk.Frame(self.root, padx=15, pady=15,
+        frame = tk.Frame(self.root, padx=20, pady=20,
                          relief=tk.RIDGE, bd=2)
         frame.grid(row=0, column=0, sticky=tk.NS,
                    padx=(10, 5), pady=10)
 
         tk.Label(frame, text="Simulation Controls",
-                 font=("Arial", 15, "bold")).pack(anchor=tk.CENTER,
-                                                   pady=(0, 18))
+                 font=("Arial", 16, "bold")).pack(anchor=tk.CENTER,
+                                                   pady=(0, 20))
 
-        # -----  Input fields  -----
-        inp = tk.Frame(frame, relief=tk.GROOVE, bd=2, padx=10, pady=10)
+        # input fields
+        inp = tk.Frame(frame, relief=tk.GROOVE, bd=2, padx=15, pady=15)
         inp.pack(fill=tk.X, pady=(0, 15))
 
         tk.Label(inp, text="Parameters",
-                 font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=(0, 8))
+                 font=("Arial", 13, "bold")).pack(anchor=tk.W, pady=(0, 10))
 
-        self._vars = {}               # label -> StringVar
+        self._vars = {}
+        # (label, default, min, max, max_chars)
         fields = [
-            ("Lattice Size:",       "30"),
-            ("Exchange Constant J:", "1.0"),
-            ("DMI Strength D:",     "0.5"),
-            ("Magnetic Field B:",   "0.3"),
-            ("Current Strength:",   "0.5"),
-            ("Simulation Steps:",   "100"),
+            ("Lattice Size:",       "30",  4,  200, 3),
+            ("Exchange Constant J:", "1.0", 0,  10,  4),
+            ("DMI Strength D:",     "0.5", 0,  5,   4),
+            ("Magnetic Field B:",   "0.3", 0,  5,   4),
+            ("Current Strength:",   "0.5", 0.01, 5, 4),
+            ("Simulation Steps:",   "100", 1,  5000, 4),
         ]
 
-        for label, default in fields:
+        def _make_validator(limit):
+            def validate(P):
+                return len(P) <= limit
+            return self.root.register(validate)
+
+        for label, default, vmin, vmax, maxlen in fields:
             row = tk.Frame(inp)
-            row.pack(fill=tk.X, pady=2)
-            tk.Label(row, text=label, width=20, anchor=tk.W,
-                     font=("Arial", 10)).pack(side=tk.LEFT)
+            row.pack(fill=tk.X, pady=4)
+            tk.Label(row, text=label, width=22, anchor=tk.W,
+                     font=("Arial", 11)).pack(side=tk.LEFT)
             var = tk.StringVar(value=default)
-            tk.Entry(row, textvariable=var, width=10,
-                     font=("Arial", 10)).pack(side=tk.RIGHT)
+            vcmd = _make_validator(maxlen)
+            entry = tk.Entry(row, textvariable=var, width=14,
+                             font=("Arial", 11),
+                             validate="key", validatecommand=(vcmd, "%P"))
+            entry.pack(side=tk.RIGHT)
             self._vars[label] = var
 
-        # -----  Buttons  -----
-        btn_frame = tk.Frame(frame, padx=10, pady=10)
+        # buttons
+        btn_frame = tk.Frame(frame, padx=15, pady=15)
         btn_frame.pack(fill=tk.X, pady=(0, 15))
 
         tk.Label(btn_frame, text="Actions",
-                 font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=(0, 8))
+                 font=("Arial", 13, "bold")).pack(anchor=tk.W, pady=(0, 10))
 
         buttons = [
             ("Generate Skyrmion",   self._on_generate,  "#4CAF50"),
@@ -124,26 +106,26 @@ class SkyrmionApp:
 
         for text, cmd, colour in buttons:
             tk.Button(btn_frame, text=text, command=cmd,
-                      font=("Arial", 11, "bold"),
+                      font=("Arial", 12, "bold"),
                       bg=colour, fg="white",
-                      padx=10, pady=7,
+                      padx=15, pady=10,
                       cursor="hand2",
-                      relief=tk.RAISED, bd=3).pack(fill=tk.X, pady=4)
+                      relief=tk.RAISED, bd=3).pack(fill=tk.X, pady=5)
 
-        # -----  Status  -----
-        st = tk.Frame(frame, relief=tk.GROOVE, bd=2, padx=10, pady=10)
+        # status display
+        st = tk.Frame(frame, relief=tk.GROOVE, bd=2, padx=15, pady=15)
         st.pack(fill=tk.X)
 
         tk.Label(st, text="Status",
-                 font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=(0, 8))
+                 font=("Arial", 13, "bold")).pack(anchor=tk.W, pady=(0, 10))
 
         self._status = tk.Label(st, text="Ready",
-                                font=("Arial", 10), wraplength=220,
+                                font=("Arial", 11), wraplength=250,
                                 justify=tk.LEFT)
         self._status.pack(anchor=tk.W)
 
+    # center panel for the plot
     def _build_plot_panel(self):
-        """Centre panel: hosts the matplotlib figure(s)."""
         frame = tk.Frame(self.root, relief=tk.SUNKEN, bd=2)
         frame.grid(row=0, column=1, sticky=tk.NSEW, padx=5, pady=10)
         frame.grid_rowconfigure(0, weight=1)
@@ -152,7 +134,7 @@ class SkyrmionApp:
         self._plot_container = tk.Frame(frame, bg="white")
         self._plot_container.grid(row=0, column=0, sticky=tk.NSEW)
 
-        # placeholder message
+        # placeholder message when no plot is shown
         msg = tk.Message(
             self._plot_container,
             text="Generate a skyrmion to begin\n\n"
@@ -161,30 +143,30 @@ class SkyrmionApp:
                  "3.  Click  'Run Motion Simulation'\n"
                  "4.  Click  'Plot Center of Mass'",
             font=("Arial", 14), bg="white", fg="grey",
-            justify=tk.CENTER, width=500,
+            justify=tk.CENTER, width=600,
         )
         msg.pack(expand=True, fill=tk.BOTH)
 
+    # right panel showing equations and results
     def _build_info_panel(self):
-        """Right panel: equations and results."""
-        frame = tk.Frame(self.root, padx=15, pady=15,
+        frame = tk.Frame(self.root, padx=20, pady=20,
                          relief=tk.RIDGE, bd=2)
         frame.grid(row=0, column=2, sticky=tk.NS,
                    padx=(5, 10), pady=10)
 
-        # equations
+        # equations section
         self._eq_frame = tk.Frame(frame)
         self._eq_frame.pack(fill=tk.X, pady=(0, 20))
         display_equations(self._eq_frame)
 
-        # results
+        # results section
         res_frame = tk.Frame(frame, relief=tk.GROOVE, bd=2,
-                             padx=10, pady=10)
+                             padx=15, pady=15)
         res_frame.pack(fill=tk.X)
 
         tk.Label(res_frame, text="Results",
-                 font=("Arial", 12, "bold")).pack(anchor=tk.W,
-                                                   pady=(0, 8))
+                 font=("Arial", 13, "bold")).pack(anchor=tk.W,
+                                                   pady=(0, 10))
 
         self._res_container = tk.Frame(res_frame)
         self._res_container.pack(fill=tk.X)
@@ -192,16 +174,12 @@ class SkyrmionApp:
         self._res_label = tk.Label(
             self._res_container,
             text="No results yet.\nRun a simulation first.",
-            font=("Arial", 10), fg="grey", justify=tk.CENTER,
+            font=("Arial", 11), fg="grey", justify=tk.CENTER,
         )
         self._res_label.pack(pady=20)
 
-    # ------------------------------------------------------------------
-    #  Initialisation
-    # ------------------------------------------------------------------
-
+    # generates the initial skyrmion with default params
     def _initialise(self):
-        """Generate a skyrmion with the default parameters."""
         self._set_status("Generating initial skyrmion ...")
         try:
             sz = int(self._vars["Lattice Size:"].get())
@@ -211,16 +189,13 @@ class SkyrmionApp:
         except Exception as exc:
             self._set_status(f"Init error: {exc}")
 
-    # ------------------------------------------------------------------
-    #  Helpers
-    # ------------------------------------------------------------------
-
+    # helpers
     def _set_status(self, msg):
         self._status.config(text=msg)
         self.root.update_idletasks()
 
+    # reads all parameter values from the input fields
     def _read_params(self):
-        """Read and validate all inputs; return a dict or raise."""
         try:
             return {
                 "lattice_size":     int(self._vars["Lattice Size:"].get()),
@@ -233,13 +208,20 @@ class SkyrmionApp:
         except ValueError:
             raise ValueError("All fields must contain valid numbers.")
 
+    # checks that parameters are within allowed ranges
     def _check_params(self, p):
-        if p["lattice_size"] < 4:
-            raise ValueError("Lattice size must be >= 4.")
-        if p["J"] < 0:
-            raise ValueError("Exchange constant J must be >= 0.")
-        if p["num_steps"] < 1:
-            raise ValueError("Steps must be >= 1.")
+        if p["lattice_size"] < 4 or p["lattice_size"] > 200:
+            raise ValueError("Lattice size must be between 4 and 200.")
+        if p["J"] < 0 or p["J"] > 10:
+            raise ValueError("Exchange constant J must be between 0 and 10.")
+        if p["D"] < 0 or p["D"] > 5:
+            raise ValueError("DMI strength D must be between 0 and 5.")
+        if p["B"] < 0 or p["B"] > 5:
+            raise ValueError("Magnetic field B must be between 0 and 5.")
+        if p["current_strength"] < 0.01 or p["current_strength"] > 5:
+            raise ValueError("Current strength must be between 0.01 and 5.")
+        if p["num_steps"] < 1 or p["num_steps"] > 5000:
+            raise ValueError("Steps must be between 1 and 5000.")
 
     def _clear_plot(self):
         for w in self._plot_container.winfo_children():
@@ -252,12 +234,10 @@ class SkyrmionApp:
         c = plot_spin_configuration(self._plot_container, self.spins)
         c.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-    # ------------------------------------------------------------------
-    #  Callbacks
-    # ------------------------------------------------------------------
+    # button callbacks
 
+    # generates a fresh skyrmion
     def _on_generate(self):
-        """Generate a fresh skyrmion."""
         self._set_status("Generating skyrmion ...")
         try:
             p = self._read_params()
@@ -281,8 +261,8 @@ class SkyrmionApp:
             messagebox.showerror("Error", f"Generation failed:\n{exc}")
             self._set_status("Error: generation failed")
 
+    # runs the motion simulation
     def _on_motion(self):
-        """Run the motion simulation."""
         if self.spins is None:
             messagebox.showwarning("No Skyrmion",
                                    "Generate a skyrmion first.")
@@ -320,8 +300,8 @@ class SkyrmionApp:
             messagebox.showerror("Error", f"Simulation failed:\n{exc}")
             self._set_status("Error: simulation failed")
 
+    # plots the center of mass trajectory
     def _on_plot_com(self):
-        """Plot the centre-of-mass trajectory."""
         if not self.positions or len(self.positions) < 2:
             messagebox.showwarning("No Trajectory",
                                    "Run a motion simulation first.")
@@ -340,8 +320,8 @@ class SkyrmionApp:
             messagebox.showerror("Error", f"Plot failed:\n{exc}")
             self._set_status("Error: plot failed")
 
+    # exports results to a text file on the desktop
     def _on_export(self):
-        """Export trajectory and parameters to a text file."""
         if not self.positions:
             messagebox.showwarning("No Data",
                                    "Run a motion simulation first.")
@@ -359,8 +339,7 @@ class SkyrmionApp:
 
             lines = [
                 "=" * 58,
-                "  Hybrid Quantum-Classical Simulation of Skyrmion Dynamics",
-                "  Results Export",
+                "  Skyrmion Simulation Results",
                 "=" * 58,
                 "",
                 "PARAMETERS",
@@ -411,20 +390,16 @@ class SkyrmionApp:
             messagebox.showerror("Export Error", str(exc))
             self._set_status("Error: export failed")
 
+    # updates the results display panel
     def _show_results(self, init, final, dist, steps):
-        """Update the results panel."""
         for w in self._res_container.winfo_children():
             w.destroy()
         display_results(self._res_container, init, final, dist, steps)
 
 
-# ---------------------------------------------------------------------------
-#  Entry point
-# ---------------------------------------------------------------------------
-
 def main():
     root = tk.Tk()
-    app = SkyrmionApp(root)          # noqa: F841  (kept alive by root)
+    app = SkyrmionApp(root)
     root.protocol("WM_DELETE_WINDOW", root.destroy)
     root.mainloop()
 

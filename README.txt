@@ -1,122 +1,60 @@
-============================================================================
-  Hybrid Quantum-Classical Simulation of Skyrmion Dynamics
-============================================================================
+Skyrmion Dynamics Simulator
+===========================
 
-A desktop GUI application that simulates and visualises magnetic
-skyrmions -- topologically protected spin textures that behave like
-particles and can be moved with electric currents.
+A desktop app that simulates magnetic skyrmions. Basically little
+swirly magnetic patterns that can be pushed around with electric
+currents. Uses tkinter for the GUI and matplotlib for plotting.
 
-The program implements a classical atomistic spin model with:
+Files
+-----
+main.py          -- the GUI
+simulation.py    -- the physics stuff
+visualization.py -- plotting and display
+requirements.txt -- what you need to install
+README.txt       -- this file
 
-  * Heisenberg Exchange Energy
-  * Dzyaloshinskii-Moriya Interaction (DMI)
-  * Zeeman Energy
+Setup
+-----
+You need Python 3.7 or newer. Its a good idea to use a virtual
+environment:
 
-and visualises the spin texture and centre-of-mass motion using
-matplotlib quiver plots embedded in a Tkinter window.
+  python3 -m venv skyrmion_env
+  source skyrmion_env/bin/activate      # linux/mac
+  # skyrmion_env\Scripts\activate       # windows
 
+Then install the required packages:
 
---------------------------------------------------------------------------
-  Project Structure
---------------------------------------------------------------------------
+  pip install -r requirements.txt
 
-  main.py            -- Tkinter GUI entry point
-  simulation.py      -- physics engine (skyrmion generation, energies,
-                        motion simulation)
-  visualization.py   -- plotting and GUI display helpers
-  requirements.txt   -- Python dependencies
-  README.txt         -- this file
+Running
+-------
+Make sure the virtual env is active and run:
 
+  python main.py
 
---------------------------------------------------------------------------
-  Installation
---------------------------------------------------------------------------
+A window should pop up. If something is missing it will tell you.
 
-**Prerequisites**
+How to use
+----------
+1. Type in your parameters (or just use the defaults)
+2. Click "Generate Skyrmion" to make the spin texture
+3. Click "Run Motion Simulation" to watch it move
+4. Click "Plot Center of Mass" to see the path it took
+5. Click "Export Results" to save everything to a text file
 
-  Python 3.7 or later must be installed on your system.
+Physics (briefly)
+-----------------
+Skyrmions are these cool magnetic whirlpools. The three energy
+terms that keep them stable are exchange (wants spins aligned),
+DMI (wants spins twisted), and Zeeman (from the external field).
+When you run a current through them they move like leaves on water,
+including a sideways drift called the Hall effect.
 
-**Step 1: Create a virtual environment (recommended)**
+Troubleshooting
+---------------
+If you get "No module named tkinter":
+  Linux: sudo apt install python3-tk
+  Mac/Windows: should come with Python
 
-  On Linux / macOS:
-
-      python3 -m venv skyrmion_env
-      source skyrmion_env/bin/activate
-
-  On Windows:
-
-      python -m venv skyrmion_env
-      skyrmion_env\Scripts\activate
-
-**Step 2: Install dependencies**
-
-      pip install -r requirements.txt
-
-  This will install numpy and matplotlib.
-
-
---------------------------------------------------------------------------
-  Running the Application
---------------------------------------------------------------------------
-
-  Make sure you are in the project directory (skyrmion_sim/) and your
-  virtual environment is active, then run:
-
-      python main.py
-
-  A window of 1400 x 900 pixels will open.  If your screen resolution
-  is smaller, the window can be resized (minimum 1200 x 800).
-
-
---------------------------------------------------------------------------
-  How to Use
---------------------------------------------------------------------------
-
-  1.  Adjust the parameters (Lattice Size, Exchange Constant J,
-      DMI Strength D, Magnetic Field B, Current Strength,
-      Simulation Steps) in the left panel.
-
-  2.  Click **Generate Skyrmion** to create the spin texture.
-      A quiver plot of the skyrmion appears in the centre panel.
-
-  3.  Click **Run Motion Simulation** to drive the skyrmion with
-      a spin-polarised current.  The final spin state is shown.
-
-  4.  Click **Plot Center of Mass** to see the trajectory traced
-      by the skyrmion centre during the simulation.
-
-  5.  Click **Export Results** to save the parameters, energies
-      and trajectory to a text file on the Desktop.
-
-
---------------------------------------------------------------------------
-  Physics Summary
---------------------------------------------------------------------------
-
-  A skyrmion is a swirling magnetic texture.  Each little arrow
-  (spin) on the grid represents a magnetic moment.  The three
-  energy terms that stabilise the skyrmion are:
-
-  * Exchange (J):  neighbouring spins prefer to point the same way.
-  * DMI (D):       neighbouring spins prefer to twist.
-  * Zeeman (B):    an external field pushes spins up or down.
-
-  When a current flows through the skyrmion, the conduction
-  electrons transfer angular momentum and push the skyrmion
-  along (like a leaf carried by a stream).  The skyrmion moves
-  both along the current and sideways (skyrmion Hall effect).
-
-
---------------------------------------------------------------------------
-  Troubleshooting
---------------------------------------------------------------------------
-
-  **No module named 'tkinter'**
-      On Linux:  sudo apt install python3-tk   (Debian/Ubuntu)
-                 sudo dnf install python3-tkinter  (Fedora)
-      On macOS:  tkinter is included with the standard Python
-                 installer from python.org.
-      On Windows: tkinter is included by default.
-
-  **ImportError: No module named numpy/matplotlib**
-      Run:  pip install -r requirements.txt
+If numpy or matplotlib are missing:
+  pip install -r requirements.txt
