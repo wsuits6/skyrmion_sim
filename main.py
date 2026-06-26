@@ -77,7 +77,9 @@ class SkyrmionApp:
                 return len(P) <= limit
             return self.root.register(validate)
 
+        self._defaults = {}
         for label, default, vmin, vmax, maxlen in fields:
+            self._defaults[label] = default
             row = tk.Frame(inp)
             row.pack(fill=tk.X, pady=4)
             tk.Label(row, text=label, width=22, anchor=tk.W,
@@ -102,6 +104,7 @@ class SkyrmionApp:
             ("Run Motion Simulation", self._on_motion,  "#2196F3"),
             ("Plot Center of Mass", self._on_plot_com,  "#FF9800"),
             ("Export Results",      self._on_export,    "#9C27B0"),
+            ("Reset Parameters",    self._on_reset,     "#607D8B"),
         ]
 
         for text, cmd, colour in buttons:
@@ -389,6 +392,35 @@ class SkyrmionApp:
         except Exception as exc:
             messagebox.showerror("Export Error", str(exc))
             self._set_status("Error: export failed")
+
+    # resets all parameters and simulation state to defaults
+    def _on_reset(self):
+        for label, default in self._defaults.items():
+            self._vars[label].set(default)
+        self.spins = None
+        self.centre = None
+        self.positions = None
+        self.energies = None
+        self._clear_plot()
+        msg = tk.Message(
+            self._plot_container,
+            text="Generate a skyrmion to begin\n\n"
+                 "1.  Set parameters (or keep defaults)\n"
+                 "2.  Click  'Generate Skyrmion'\n"
+                 "3.  Click  'Run Motion Simulation'\n"
+                 "4.  Click  'Plot Center of Mass'",
+            font=("Arial", 14), bg="white", fg="grey",
+            justify=tk.CENTER, width=600,
+        )
+        msg.pack(expand=True, fill=tk.BOTH)
+        for w in self._res_container.winfo_children():
+            w.destroy()
+        tk.Label(
+            self._res_container,
+            text="No results yet.\nRun a simulation first.",
+            font=("Arial", 11), fg="grey", justify=tk.CENTER,
+        ).pack(pady=20)
+        self._set_status("Ready")
 
     # updates the results display panel
     def _show_results(self, init, final, dist, steps):
